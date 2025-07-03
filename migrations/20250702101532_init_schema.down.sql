@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS "news";
+DROP TABLE IF EXISTS "tags";
+DROP TABLE IF EXISTS "categories";
+DROP TABLE IF EXISTS "statuses";

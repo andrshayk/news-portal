@@ -2,7 +2,7 @@ package delivery
 
 import (
 	"net/http"
-	"news-portal/internal/entity"
+	"news-portal/internal/delivery/dto"
 	"news-portal/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -26,13 +26,6 @@ func (h *CategoryHandler) GetAll(c *gin.Context) {
 		return
 	}
 	// Преобразуем в []CategoryResponse
-	resp := make([]entity.CategoryResponse, len(categories))
-	for i, cat := range categories {
-		resp[i] = entity.CategoryResponse{
-			CategoryID:  cat.CategoryID,
-			Tittle:      cat.Tittle,
-			OrderNumber: cat.OrderNumber,
-		}
-	}
+	resp := dto.ToCategoryResponseSlice(categories)
 	c.JSON(http.StatusOK, resp)
 }

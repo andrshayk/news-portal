@@ -7,16 +7,16 @@ import (
 )
 
 type News struct {
-	NewsID      int           `gorm:"column:newsId;primaryKey" json:"newsId"`
-	Tittle      string        `gorm:"column:tittle" json:"tittle"`
-	ShortText   string        `gorm:"column:shortText" json:"shortText"`
-	FullText    string        `gorm:"column:fullText" json:"fullText,omitempty"`
-	PublishedAt time.Time     `gorm:"column:publishedAt" json:"publishedAt"`
-	AuthorName  string        `gorm:"column:authorName" json:"authorName"`
-	CategoryID  int           `gorm:"column:categoryId" json:"categoryId"`
-	TagIDs      pq.Int64Array `gorm:"column:tagIds;type:int[]" json:"tagIds"`
-	CreatedAt   time.Time     `gorm:"column:createdAt" json:"createdAt"`
-	StatusID    int           `gorm:"column:statusId" json:"statusId"`
+	NewsID      int           `gorm:"column:newsId;primaryKey"`
+	Tittle      string        `gorm:"column:tittle"`
+	ShortText   string        `gorm:"column:shortText"`
+	FullText    string        `gorm:"column:fullText"`
+	PublishedAt time.Time     `gorm:"column:publishedAt"`
+	AuthorName  string        `gorm:"column:authorName"`
+	CategoryID  int           `gorm:"column:categoryId"`
+	TagIDs      pq.Int64Array `gorm:"column:tagIds;type:int[]"`
+	CreatedAt   time.Time     `gorm:"column:createdAt"`
+	StatusID    int           `gorm:"column:statusId"`
 }
 
 type NewsResponse struct {
@@ -28,4 +28,9 @@ type NewsResponse struct {
 	AuthorName  string           `json:"authorName"`
 	Category    CategoryResponse `json:"category"`
 	Tags        []TagResponse    `json:"tags"`
+}
+
+type NewsWithCategory struct {
+	News
+	Category Category `gorm:"foreignKey:CategoryID;references:CategoryID"`
 }

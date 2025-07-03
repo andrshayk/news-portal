@@ -34,3 +34,7 @@ func (uc *TagService) GetTagsByIDs(ctx context.Context, ids []int32) ([]entity.T
 	}
 	return tags, nil
 }
+
+func (uc *TagService) GetTagsByIDsFast(ctx context.Context, ids []int64) ([]entity.Tag, error) {
+	return uc.repo.GetByIDs(ctx, ids)
+}

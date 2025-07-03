@@ -3,7 +3,7 @@ package delivery
 import (
 	"net/http"
 
-	"news-portal/internal/entity"
+	"news-portal/internal/delivery/dto"
 	"news-portal/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -27,12 +27,6 @@ func (h *TagHandler) GetAll(c *gin.Context) {
 		return
 	}
 	// Преобразуем в []TagResponse
-	resp := make([]entity.TagResponse, len(tags))
-	for i, tag := range tags {
-		resp[i] = entity.TagResponse{
-			TagID:  tag.TagID,
-			Tittle: tag.Tittle,
-		}
-	}
+	resp := dto.ToTagResponseSlice(tags)
 	c.JSON(http.StatusOK, resp)
 }

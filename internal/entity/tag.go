@@ -1,9 +1,9 @@
 package entity
 
 type Tag struct {
-	TagID    int    `gorm:"column:tagId;primaryKey" json:"tagId"`
-	Tittle   string `gorm:"column:tittle" json:"tittle"`
-	StatusID int    `gorm:"column:statusId" json:"statusId"`
+	TagID    int    `gorm:"column:tagId;primaryKey"`
+	Tittle   string `gorm:"column:tittle"`
+	StatusID int    `gorm:"column:statusId"`
 }
 
 type TagResponse struct {

@@ -1,10 +1,10 @@
 package entity
 
 type Category struct {
-	CategoryID  int    `gorm:"column:categoryId;primaryKey" json:"categoryId"`
-	Tittle      string `gorm:"column:tittle" json:"tittle"`
-	OrderNumber int    `gorm:"column:orderNumber" json:"orderNumber"`
-	StatusID    int    `gorm:"column:statusId" json:"statusId"`
+	CategoryID  int    `gorm:"column:categoryId;primaryKey"`
+	Tittle      string `gorm:"column:tittle"`
+	OrderNumber int    `gorm:"column:orderNumber"`
+	StatusID    int    `gorm:"column:statusId"`
 }
 
 type CategoryResponse struct {

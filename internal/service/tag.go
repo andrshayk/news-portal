@@ -2,28 +2,27 @@ package service
 
 import (
 	"context"
-	"news-portal/internal/entity"
 	"news-portal/internal/repository"
 )
 
 type TagService struct {
-	repo repository.TagRepository
+	repo *repository.NewsRepository
 }
 
-func NewTagService(repo repository.TagRepository) *TagService {
+func NewTagService(repo *repository.NewsRepository) *TagService {
 	return &TagService{repo: repo}
 }
 
-func (uc *TagService) GetAllTags(ctx context.Context) ([]entity.Tag, error) {
-	return uc.repo.GetAll(ctx)
+func (uc *TagService) GetAllTags(ctx context.Context) ([]repository.Tag, error) {
+	return (*uc.repo).GetAllTags(ctx)
 }
 
-func (uc *TagService) GetTagsByIDs(ctx context.Context, ids []int32) ([]entity.Tag, error) {
-	allTags, err := uc.repo.GetAll(ctx)
+func (uc *TagService) GetTagsByIDs(ctx context.Context, ids []int32) ([]repository.Tag, error) {
+	allTags, err := (*uc.repo).GetAllTags(ctx)
 	if err != nil {
 		return nil, err
 	}
-	var tags []entity.Tag
+	var tags []repository.Tag
 	for _, tag := range allTags {
 		for _, id := range ids {
 			if int32(tag.TagID) == id {
@@ -35,6 +34,6 @@ func (uc *TagService) GetTagsByIDs(ctx context.Context, ids []int32) ([]entity.T
 	return tags, nil
 }
 
-func (uc *TagService) GetTagsByIDsFast(ctx context.Context, ids []int64) ([]entity.Tag, error) {
-	return uc.repo.GetByIDs(ctx, ids)
+func (uc *TagService) GetTagsByIDsFast(ctx context.Context, ids []int64) ([]repository.Tag, error) {
+	return (*uc.repo).GetTagByIDs(ctx, ids)
 }

@@ -4,32 +4,24 @@ import (
 	"context"
 	"log"
 
-	"news-portal/internal/entity"
-
 	"gorm.io/gorm"
 )
 
 // --- NewsRepository ---
-type NewsRepository interface {
-	GetByID(ctx context.Context, id int) (*entity.News, error)
-	GetAll(ctx context.Context, tagID, categoryID, limit, offset int) ([]entity.News, error)
-	Count(ctx context.Context, tagID, categoryID int) (int64, error)
-	GetAllWithCategory(ctx context.Context, tagID, categoryID, limit, offset int) ([]entity.NewsWithCategory, error)
-}
-
-type newsRepository struct {
+type NewsRepository struct {
 	db *gorm.DB
 }
 
-func NewNewsRepository(db *gorm.DB) NewsRepository {
-	return &newsRepository{db: db}
+func NewNewsRepository(db *gorm.DB) *NewsRepository {
+	return &NewsRepository{db: db}
 }
 
-func (r *newsRepository) GetByID(ctx context.Context, id int) (*entity.News, error) {
-	var news entity.News
+func (r *NewsRepository) GetByID(ctx context.Context, id int) (*News, error) {
+	var news News
 	if err := r.db.WithContext(ctx).First(&news, id).Error; err != nil {
 		return nil, err
 	}
+	log.Printf("[DEBUG] NEWS BY ID: %+v", news)
 	return &news, nil
 }
 
@@ -45,9 +37,9 @@ func applyNewsFilters(query *gorm.DB, tagID, categoryID int) *gorm.DB {
 	return query
 }
 
-func (r *newsRepository) GetAll(ctx context.Context, tagID, categoryID, limit, offset int) ([]entity.News, error) {
-	var newsList []entity.News
-	query := applyNewsFilters(r.db.WithContext(ctx).Model(&entity.News{}), tagID, categoryID)
+func (r *NewsRepository) GetAll(ctx context.Context, tagID, categoryID, limit, offset int) ([]News, error) {
+	var newsList []News
+	query := applyNewsFilters(r.db.WithContext(ctx).Model(&News{}), tagID, categoryID)
 	// DEBUG
 	stmt := query.Session(&gorm.Session{DryRun: true}).Order(`"publishedAt" DESC`).Limit(limit).Offset(offset).Find(&newsList).Statement
 	log.Printf("[DEBUG] SQL: %s | Vars: %v", stmt.SQL.String(), stmt.Vars)
@@ -61,9 +53,9 @@ func (r *newsRepository) GetAll(ctx context.Context, tagID, categoryID, limit, o
 	return newsList, nil
 }
 
-func (r *newsRepository) Count(ctx context.Context, tagID, categoryID int) (int64, error) {
+func (r *NewsRepository) Count(ctx context.Context, tagID, categoryID int) (int64, error) {
 	var count int64
-	query := applyNewsFilters(r.db.WithContext(ctx).Model(&entity.News{}), tagID, categoryID)
+	query := applyNewsFilters(r.db.WithContext(ctx).Model(&News{}), tagID, categoryID)
 	// DEBUG
 	stmt := query.Session(&gorm.Session{DryRun: true}).Count(&count).Statement
 	log.Printf("[DEBUG] SQL: %s | Vars: %v", stmt.SQL.String(), stmt.Vars)
@@ -77,36 +69,27 @@ func (r *newsRepository) Count(ctx context.Context, tagID, categoryID int) (int6
 	return count, nil
 }
 
-func (r *newsRepository) GetAllWithCategory(ctx context.Context, tagID, categoryID, limit, offset int) ([]entity.NewsWithCategory, error) {
-	var newsList []entity.NewsWithCategory
+func (r *NewsRepository) GetAllWithCategory(ctx context.Context, tagID, categoryID, limit, offset int) ([]NewsWithCategory, error) {
+	var newsList []NewsWithCategory
 	query := r.db.WithContext(ctx).
-		Model(&entity.News{}).
-		Select(`news.*, categories."categoryId", categories."tittle", categories."orderNumber", categories."statusId"`).
-		Joins(`LEFT JOIN categories ON news."categoryId" = categories."categoryId"`)
+		Model(&News{}).
+		Select(`news.*, 
+			categories."categoryId" as category__category_id, 
+			categories."tittle" as category__tittle, 
+			categories."orderNumber" as category__order_number, 
+			categories."statusId" as category__status_id`).
+		Joins(`INNER JOIN categories ON news."categoryId" = categories."categoryId"`)
 	query = applyNewsFilters(query, tagID, categoryID)
 
 	if err := query.Order(`news."publishedAt" DESC`).Limit(limit).Offset(offset).Scan(&newsList).Error; err != nil {
 		return nil, err
 	}
+	log.Printf("[DEBUG] RESULT: %+v", newsList)
 	return newsList, nil
 }
 
-// --- TagRepository ---
-type TagRepository interface {
-	GetAll(ctx context.Context) ([]entity.Tag, error)
-	GetByIDs(ctx context.Context, ids []int64) ([]entity.Tag, error)
-}
-
-type tagRepository struct {
-	db *gorm.DB
-}
-
-func NewTagRepository(db *gorm.DB) TagRepository {
-	return &tagRepository{db: db}
-}
-
-func (r *tagRepository) GetAll(ctx context.Context) ([]entity.Tag, error) {
-	var tags []entity.Tag
+func (r *NewsRepository) GetAllTags(ctx context.Context) ([]Tag, error) {
+	var tags []Tag
 	err := r.db.WithContext(ctx).
 		Where(`"statusId" = ?`, 1).
 		Order(`"tittle"`).
@@ -114,8 +97,8 @@ func (r *tagRepository) GetAll(ctx context.Context) ([]entity.Tag, error) {
 	return tags, err
 }
 
-func (r *tagRepository) GetByIDs(ctx context.Context, ids []int64) ([]entity.Tag, error) {
-	var tags []entity.Tag
+func (r *NewsRepository) GetTagByIDs(ctx context.Context, ids []int64) ([]Tag, error) {
+	var tags []Tag
 	err := r.db.WithContext(ctx).
 		Where(`"statusId" = ?`, 1).
 		Where(`"tagId" IN ?`, ids).
@@ -124,21 +107,8 @@ func (r *tagRepository) GetByIDs(ctx context.Context, ids []int64) ([]entity.Tag
 	return tags, err
 }
 
-// --- CategoryRepository ---
-type CategoryRepository interface {
-	GetAll(ctx context.Context) ([]entity.Category, error)
-}
-
-type categoryRepository struct {
-	db *gorm.DB
-}
-
-func NewCategoryRepository(db *gorm.DB) CategoryRepository {
-	return &categoryRepository{db: db}
-}
-
-func (r *categoryRepository) GetAll(ctx context.Context) ([]entity.Category, error) {
-	var categories []entity.Category
+func (r *NewsRepository) GetCategories(ctx context.Context) ([]Category, error) {
+	var categories []Category
 	err := r.db.WithContext(ctx).
 		Where(`"statusId" = ?`, 1).
 		Order(`"orderNumber"`).

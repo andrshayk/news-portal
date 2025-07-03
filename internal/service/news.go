@@ -2,42 +2,41 @@ package service
 
 import (
 	"context"
-	"fmt"
-	"news-portal/internal/delivery/dto"
-	"news-portal/internal/entity"
 	"news-portal/internal/repository"
+	"news-portal/internal/response"
 )
 
 type NewsService struct {
-	repo repository.NewsRepository
+	newsRepo        *repository.NewsRepository
+	categoryService *CategoryService
+	tagService      *TagService
 }
 
-func NewNewsService(repo repository.NewsRepository) *NewsService {
-	return &NewsService{repo: repo}
+func NewNewsService(newsRepo *repository.NewsRepository, categoryService *CategoryService, tagService *TagService) *NewsService {
+	return &NewsService{
+		newsRepo:        newsRepo,
+		categoryService: categoryService,
+		tagService:      tagService,
+	}
 }
 
-func (uc *NewsService) GetAllNews(ctx context.Context, tagId, categoryId, limit, offset int) ([]entity.News, error) {
-	return uc.repo.GetAll(ctx, tagId, categoryId, limit, offset)
+func (uc *NewsService) GetAllNews(ctx context.Context, tagId, categoryId, limit, offset int) ([]repository.News, error) {
+	return uc.newsRepo.GetAll(ctx, tagId, categoryId, limit, offset)
 }
 
 func (uc *NewsService) CountNews(ctx context.Context, tagId, categoryId int) (int64, error) {
-	return uc.repo.Count(ctx, tagId, categoryId)
+	return uc.newsRepo.Count(ctx, tagId, categoryId)
 }
 
-func (uc *NewsService) GetNewsByID(ctx context.Context, id int) (*entity.News, error) {
-	return uc.repo.GetByID(ctx, id)
+func (uc *NewsService) GetNewsByID(ctx context.Context, id int) (*repository.News, error) {
+	return uc.newsRepo.GetByID(ctx, id)
 }
 
-func (uc *NewsService) GetAllNewsWithCategory(ctx context.Context, tagId, categoryId, limit, offset int) ([]entity.NewsWithCategory, error) {
-	if repoWithCat, ok := uc.repo.(interface {
-		GetAllWithCategory(context.Context, int, int, int, int) ([]entity.NewsWithCategory, error)
-	}); ok {
-		return repoWithCat.GetAllWithCategory(ctx, tagId, categoryId, limit, offset)
-	}
-	return nil, fmt.Errorf("repo does not support GetAllWithCategory")
+func (uc *NewsService) GetAllNewsWithCategory(ctx context.Context, tagId, categoryId, limit, offset int) ([]repository.NewsWithCategory, error) {
+	return uc.newsRepo.GetAllWithCategory(ctx, tagId, categoryId, limit, offset)
 }
 
-func (uc *NewsService) GetNewsResponses(ctx context.Context, tagId, categoryId, limit, offset int, categoryService *CategoryService, tagService *TagService) ([]dto.NewsResponse, error) {
+func (uc *NewsService) GetNewsResponses(ctx context.Context, tagId, categoryId, limit, offset int) ([]response.NewsResponse, error) {
 	newsList, err := uc.GetAllNewsWithCategory(ctx, tagId, categoryId, limit, offset)
 	if err != nil {
 		return nil, err
@@ -55,40 +54,55 @@ func (uc *NewsService) GetNewsResponses(ctx context.Context, tagId, categoryId, 
 		tagIds = append(tagIds, id)
 	}
 
-	tags, _ := tagService.GetTagsByIDsFast(ctx, tagIds)
-	tagMap := make(map[int64]entity.Tag)
+	var tags []repository.Tag
+	if len(tagIds) > 0 {
+		tags, err = uc.tagService.GetTagsByIDsFast(ctx, tagIds)
+		if err != nil {
+			return nil, err
+		}
+	}
+	tagMap := make(map[int64]repository.Tag)
 	for _, t := range tags {
 		tagMap[int64(t.TagID)] = t
 	}
 
-	var resp []dto.NewsResponse
+	var resp []response.NewsResponse
 	for _, n := range newsList {
-		catResp := dto.ToCategoryResponse(n.Category)
+		catResp := response.ToCategoryResponse(n.Category.ToCategory())
 		// Собираем теги для новости
-		tagResps := make([]dto.TagResponse, 0, len(n.TagIDs))
+		tagResps := make([]response.TagResponse, 0, len(n.TagIDs))
 		for _, tagId := range n.TagIDs {
 			if tag, ok := tagMap[tagId]; ok {
-				tagResps = append(tagResps, dto.ToTagResponse(tag))
+				tagResps = append(tagResps, response.ToTagResponse(tag))
 			}
 		}
-		resp = append(resp, dto.ToNewsResponse(n.News, catResp, tagResps))
+		resp = append(resp, response.ToNewsResponse(n.News, catResp, tagResps))
 	}
 	return resp, nil
 }
 
-func (uc *NewsService) GetNewsResponseByID(ctx context.Context, id int, categoryService *CategoryService, tagService *TagService) (*dto.NewsResponse, error) {
+func (uc *NewsService) GetNewsResponseByID(ctx context.Context, id int) (*response.NewsResponse, error) {
 	n, err := uc.GetNewsByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	category, _ := categoryService.GetCategoryByID(ctx, n.CategoryID)
+	category, err := uc.categoryService.GetCategoryByID(ctx, n.CategoryID)
+	if err != nil {
+		return nil, err
+	}
 	tagIDs := make([]int32, len(n.TagIDs))
 	for i, v := range n.TagIDs {
 		tagIDs[i] = int32(v)
 	}
-	tags, _ := tagService.GetTagsByIDs(ctx, tagIDs)
-	catResp := dto.ToCategoryResponse(*category)
-	tagResps := dto.ToTagResponseSlice(tags)
-	resp := dto.ToNewsResponse(*n, catResp, tagResps)
+	var tags []repository.Tag
+	if len(tagIDs) > 0 {
+		tags, err = uc.tagService.GetTagsByIDs(ctx, tagIDs)
+		if err != nil {
+			return nil, err
+		}
+	}
+	catResp := response.ToCategoryResponse(*category)
+	tagResps := response.ToTagResponseSlice(tags)
+	resp := response.ToNewsResponse(*n, catResp, tagResps)
 	return &resp, nil
 }

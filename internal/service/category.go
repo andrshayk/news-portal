@@ -3,24 +3,23 @@ package service
 import (
 	"context"
 	"fmt"
-	"news-portal/internal/entity"
 	"news-portal/internal/repository"
 )
 
 type CategoryService struct {
-	repo repository.CategoryRepository
+	repo *repository.NewsRepository
 }
 
-func NewCategoryService(repo repository.CategoryRepository) *CategoryService {
+func NewCategoryService(repo *repository.NewsRepository) *CategoryService {
 	return &CategoryService{repo: repo}
 }
 
-func (uc *CategoryService) GetAllCategories(ctx context.Context) ([]entity.Category, error) {
-	return uc.repo.GetAll(ctx)
+func (uc *CategoryService) GetAllCategories(ctx context.Context) ([]repository.Category, error) {
+	return (*uc.repo).GetCategories(ctx)
 }
 
-func (uc *CategoryService) GetCategoryByID(ctx context.Context, id int) (*entity.Category, error) {
-	categories, err := uc.repo.GetAll(ctx)
+func (uc *CategoryService) GetCategoryByID(ctx context.Context, id int) (*repository.Category, error) {
+	categories, err := (*uc.repo).GetCategories(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -27,40 +27,28 @@ func RegisterNewsRoutes(rg *gin.RouterGroup, uc *service.NewsService, categorySe
 
 // Получение всех новостей
 func (h *NewsHandler) GetNews(c *gin.Context) {
-	tagIDStr := c.Query("tagId")
-	var tagID int
-	if tagIDStr != "" {
-		var err error
-		tagID, err = strconv.Atoi(tagIDStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid tagId"})
-			return
-		}
+	type NewsQuery struct {
+		TagID      int `form:"tagId"`
+		CategoryID int `form:"categoryId"`
+		Page       int `form:"page,default=1"`
+		Limit      int `form:"limit,default=10"`
 	}
-	categoryIDStr := c.Query("categoryId")
-	var categoryID int
-	if categoryIDStr != "" {
-		var err error
-		categoryID, err = strconv.Atoi(categoryIDStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid categoryId"})
-			return
-		}
+	var q NewsQuery
+	if err := c.ShouldBind(&q); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
-	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
-	if err != nil || page < 1 {
+	if q.Page < 1 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page"})
 		return
 	}
-	pageSize, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	if err != nil || pageSize < 1 {
+	if q.Limit < 1 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid limit"})
 		return
 	}
+	offset := (q.Page - 1) * q.Limit
 
-	offset := (page - 1) * pageSize
-
-	resp, err := h.uc.GetNewsResponses(c.Request.Context(), tagID, categoryID, pageSize, offset, h.categoryService, h.tagService)
+	resp, err := h.uc.GetNewsResponses(c.Request.Context(), q.TagID, q.CategoryID, q.Limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -71,28 +59,17 @@ func (h *NewsHandler) GetNews(c *gin.Context) {
 
 // Получение кол-ва новостей
 func (h *NewsHandler) GetNewsCount(c *gin.Context) {
-	tagIDStr := c.Query("tagId")
-	var tagID int
-	if tagIDStr != "" {
-		var err error
-		tagID, err = strconv.Atoi(tagIDStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid tagId"})
-			return
-		}
+	type NewsCountQuery struct {
+		TagID      int `form:"tagId"`
+		CategoryID int `form:"categoryId"`
 	}
-	categoryIDStr := c.Query("categoryId")
-	var categoryID int
-	if categoryIDStr != "" {
-		var err error
-		categoryID, err = strconv.Atoi(categoryIDStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid categoryId"})
-			return
-		}
+	var q NewsCountQuery
+	if err := c.ShouldBind(&q); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
-	count, err := h.uc.CountNews(c.Request.Context(), tagID, categoryID)
+	count, err := h.uc.CountNews(c.Request.Context(), q.TagID, q.CategoryID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -109,7 +86,7 @@ func (h *NewsHandler) GetNewsByID(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.uc.GetNewsResponseByID(c.Request.Context(), id, h.categoryService, h.tagService)
+	resp, err := h.uc.GetNewsResponseByID(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return

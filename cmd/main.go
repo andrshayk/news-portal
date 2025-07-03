@@ -25,13 +25,11 @@ func main() {
 
 	// Инициализация репозиториев
 	newsRepo := repository.NewNewsRepository(dbConn)
-	categoryRepo := repository.NewCategoryRepository(dbConn)
-	tagRepo := repository.NewTagRepository(dbConn)
 
 	// Инициализация сервисов
-	newsUC := service.NewNewsService(newsRepo)
-	categoryUC := service.NewCategoryService(categoryRepo)
-	tagUC := service.NewTagService(tagRepo)
+	categoryUC := service.NewCategoryService(newsRepo)
+	tagUC := service.NewTagService(newsRepo)
+	newsUC := service.NewNewsService(newsRepo, categoryUC, tagUC)
 
 	// Инициализация Gin
 	r := gin.Default()
